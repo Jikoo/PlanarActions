@@ -1,0 +1,59 @@
+name: "Maven CI"
+
+# Example usage:
+#jobs:
+#  run-maven-ci:
+#    uses: Jikoo/PlanarActions/.github/workflows/ci_maven.yml@master
+
+on:
+  workflow_call:
+    inputs:
+      java-version:
+        description: "The version of Java to install."
+        default: "17"
+        required: false
+        type: "string"
+      include-artifacts:
+        description: "File inclusion filter for build artifacts. See actions/upload-artifact path parameter."
+        default: "auto-detect"
+        required: false
+        type: "string"
+
+jobs:
+  build:
+    runs-on: "ubuntu-latest"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: ${{ inputs.java-version }}
+          cache: "maven"
+
+      # Note: install lifecycle is required for auto-detection of artifacts for multi-module projects!
+      # This does somewhat litter the cache, but the other option is a much more complex script.
+      # This may be addressed by Maven 4: https://issues.apache.org/jira/browse/MNG-6118
+      - name: "Build project"
+        run: mvn clean install
+
+      - name: "Auto-detect artifacts"
+        if: ${{ inputs.include-artifacts }} == "auto-detect"
+        run: |-
+          artifacts="$(mvn -q -Dexec.executable='echo' -Dexec.args='${project.build.directory}${file.separator}${project.build.finalName}.jar' exec:exec)"
+          printf "maven-artifacts<<EOF\n%s\nEOF\n" "$artifacts" >> "$GITHUB_ENV"
+
+      - name: "Upload auto-detected artifacts"
+        if: ${{ inputs.include-artifacts }} == "auto-detect"
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.repository.name }}
+          path: ${{ env.maven-artifacts }}
+
+      - name: "Upload specified artifacts"
+        if: ${{ inputs.include-artifacts }} != "auto-detect"
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.repository.name }}-ci
+          path: ${{ inputs.include-artifacts }}
