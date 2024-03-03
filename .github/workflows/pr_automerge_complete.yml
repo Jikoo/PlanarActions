@@ -24,7 +24,7 @@ on:
         type: "string"
       merge-labels:
         description: "Comma-separated labels to require for merging."
-        default: "dependencies,java"
+        default: "dependencies"
         required: false
         type: "string"
 
