@@ -1,0 +1,35 @@
+name: Prepare PR automerge
+
+# Example usage:
+#on:
+#  pull_request
+#
+#jobs:
+#  prep-pr-automerge:
+#    if: "github.actor == 'dependabot[bot]' && github.event_name == 'pull_request'"
+#    uses: Jikoo/PlanarActions/.github/workflows/pr_automerge_prep.yml@master
+#    with:
+#      pr-number: ${{ github.event.number }}
+
+on:
+  workflow_call:
+    inputs:
+      pr-number:
+        description: "The number of the PR invoking this action"
+        required: true
+        type: number
+
+jobs:
+  store-pr-data:
+    runs-on: ubuntu-latest
+    steps:
+      # Note: this is from GitHub's example for using data from a triggering workflow:
+      # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow
+      - name: Store Pull Number
+        run: |
+          mkdir -p ./pr
+          echo ${{ inputs.pr-number }} > ./pr/pr_number
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pr_number
+          path: pr/
