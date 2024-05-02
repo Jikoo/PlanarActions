@@ -69,7 +69,7 @@ jobs:
           pull-request-number: "${{ env.PR_NUMBER }}"
 
       - name: Merge
-        uses: pascalgn/automerge-action@v0.16.2
+        uses: pascalgn/automerge-action@v0.16.3
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           MERGE_LABELS: ${{ inputs.merge-labels }}
