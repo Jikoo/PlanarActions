@@ -10,7 +10,7 @@ on:
     inputs:
       java-version:
         description: "The version of Java to install."
-        default: "17"
+        default: "21"
         required: false
         type: "string"
       include-artifacts:
