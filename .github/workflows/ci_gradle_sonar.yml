@@ -3,7 +3,7 @@ name: "Gradle Build with SonarQube Analysis"
 # Example usage:
 #jobs:
 #  run-ci:
-#    uses: Jikoo/PlanarActions/build/gradle/sonar.yml@master
+#    uses: Jikoo/PlanarActions/ci_gradle_sonar.yml@master
 #    secrets: inherit # Or specify SONAR_TOKEN
 
 on:
