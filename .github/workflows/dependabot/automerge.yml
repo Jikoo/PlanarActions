@@ -1,0 +1,103 @@
+name: Enable auto-merge for Dependabot PRs
+
+# Example usage:
+#on:
+#  pull_request
+#
+#jobs:
+#  build:
+#   # Your build here!
+#  dependabot-pr-automerge:
+#    if: github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]'
+#    uses: Jikoo/PlanarActions/.github/workflows/dependabot/automerge.yml@master
+#    with:
+#      pr-url: ${{github.event.pull_request.html_url}}
+#    permissions:
+#      contents: write
+#      pull-requests: write
+#    needs: [ build ] # Can also use branch protection rules to set up required checks.
+
+on:
+  workflow_call:
+    inputs:
+      pr-url:
+        description: Pull request URL.
+        type: string
+        required: true
+      type-whitelist:
+        description: |-
+          A JSON array containing update types to enable auto-merge for.
+          Defaults to minor and patch versions.
+        default: '["version-update:semver-patch", "version-update:semver-minor"]'
+        type: string
+      type-blacklist:
+        description: |-
+          A JSON array containing update types to disable auto-merge for.
+          Defaults to major versions.
+        default: '["version-update:semver-major"]'
+        type: string
+
+jobs:
+  automerge:
+    runs-on: ubuntu-latest
+    steps:
+
+      # Fetch Dependabot details for finer decisionmaking.
+      # Note: dependabot/fetch-metadata does not currently support events other than pull requests.
+      # As a result, we have to manually reproduce its effects.
+      - name: "Determine if PR is to be merged"
+        id: metadata
+        run: |
+          # Fetch the first commit of the PR. This should be safe enough,
+          # because no one should be making a PR without commits.
+          commit=$(gh pr view "$PR_URL" --json commits -q .commits[0])
+          echo "First commit of PR: $commit"
+
+          # As an extra sanity step, ensure that Dependabot created the PR.
+          author=$(jq .authors[0].login)
+          if [ "$author" != "dependabot[bot]" ]; then
+            echo "Actual author: $author"
+            echo "::error ::PR was not created by Dependabot!"
+            exit 1
+          fi
+
+          body=$(jq .messageBody <<< "$commit")
+          # Locate update type declarations.
+          update_types=$(grep -P '^\s*update-type:\s' <<< "$body")
+          # Greedy match everything after the first colon and space, outputting just the match.
+          update_types=$(grep -oP '(?<=:\s).*$' <<< "$update_types")
+
+          # Because multiple dependencies can theoretically be updated at one time,
+          # generate an array of unique elements from lines.
+          update_types=$(jq -c 'split("\n") | unique' <<< "$update_types")
+
+          # True if the update types are all in the whitelist (length is 0 after removing whitelist entries).
+          whitelisted=$(jq "0 == (. - $TYPE_WHITELIST | length) <<< "$update_types"
+          # True if any update type is in the blacklist (length is changed after removing blacklist entries).
+          blacklisted=$(jq "length != (. - $TYPE_BLACKLIST | length) <<< "$update_types"
+
+          # Add outputs.
+          echo "update_types=$update_types" >> "$GITHUB_OUTPUT"
+          echo "types_whitelisted=$whitelisted" >> "$GITHUB_OUTPUT"
+          echo "types_blacklisted=$blacklisted" >> "$GITHUB_OUTPUT"
+        env:
+          PR_URL: "${{ inputs.pr-url }}"
+          TYPE_WHITELIST: "${{ inputs.type-whitelist }}"
+          TYPE_BLACKLIST: "${{ inputs.type-blacklist }}"
+          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
+      # Always approve PRs from Dependabot.
+      - name: Approve
+        run: gh pr review --approve "$PR_URL"
+        env:
+          PR_URL: "${{ inputs.pr-url }}"
+          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
+      # Enable auto-merge for the PR.
+      # Auto-merge is used rather than a direct merge so that any other required checks can pass.
+      - name: "Enable auto-merge"
+        if: fromJSON(steps.metadata.outputs.types_whitelisted) || !fromJSON(steps.metadata.outputs.types_blacklisted)
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: "${{ inputs.pr-url }}"
+          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"

@@ -32,6 +32,8 @@ jobs:
   merge-dependabot:
     runs-on: ubuntu-latest
     steps:
+      - run: echo "::warning title=Deprecation::This action will be removed soon. Please migrate to .github/workflows/dependabot/automerge.yml or pin your version to 6b2596c30aa67b2123cb40d4ce06969f8b03ee06."
+
       # Note: this is from GitHub's example for using data from a triggering workflow:
       # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow
       - name: 'Download artifact'
