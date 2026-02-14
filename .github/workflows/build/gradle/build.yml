@@ -1,0 +1,45 @@
+name: "Gradle Build with SonarQube Analysis"
+
+# Example usage:
+#jobs:
+#  run-ci:
+#    uses: Jikoo/PlanarActions/build/gradle/build.yml@master
+
+on:
+  workflow_call:
+    inputs:
+      java-version:
+        description: "The version of Java to install."
+        default: "21"
+        required: false
+        type: "string"
+      include-artifacts:
+        description: "File inclusion filter for build artifacts. See actions/upload-artifact path parameter."
+        default: "./build/libs/*.jar"
+        required: false
+        type: "string"
+
+jobs:
+  build:
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: "Set up JDK"
+        uses: actions/setup-java@v5
+        with:
+          distribution: "temurin"
+          java-version: "${{ inputs.java-version }}"
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: "Build"
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: ./gradlew build
+
+      - name: "Upload artifacts"
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ github.event.repository.name }}-ci
+          path: ${{ inputs.include-artifacts }}
