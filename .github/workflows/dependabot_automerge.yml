@@ -72,9 +72,9 @@ jobs:
           update_types=$(jq -c 'split("\n") | unique' <<< "$update_types")
 
           # True if the update types are all in the whitelist (length is 0 after removing whitelist entries).
-          whitelisted=$(jq "0 == (. - $TYPE_WHITELIST | length) <<< "$update_types"
+          whitelisted=$(jq "0 == (. - $TYPE_WHITELIST | length)" <<< "$update_types"
           # True if any update type is in the blacklist (length is changed after removing blacklist entries).
-          blacklisted=$(jq "length != (. - $TYPE_BLACKLIST | length) <<< "$update_types"
+          blacklisted=$(jq "length != (. - $TYPE_BLACKLIST | length)" <<< "$update_types"
 
           # Add outputs.
           echo "update_types=$update_types" >> "$GITHUB_OUTPUT"
