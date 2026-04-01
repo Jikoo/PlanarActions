@@ -54,8 +54,9 @@ jobs:
           echo "First commit of PR: $commit"
 
           # As an extra sanity step, ensure that Dependabot created the PR.
+          # Note that JQ outputs quoted string values!
           author=$(jq .authors[0].login <<< "$commit")
-          if [ "$author" != "dependabot[bot]" ]; then
+          if [ "$author" != '"dependabot[bot]"' ]; then
             echo "Actual author: $author"
             echo "::error ::PR was not created by Dependabot!"
             exit 1
