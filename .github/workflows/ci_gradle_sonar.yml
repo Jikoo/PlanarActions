@@ -35,7 +35,7 @@ jobs:
           distribution: "temurin"
           java-version: "${{ inputs.java-version }}"
 
-      - uses: gradle/actions/setup-gradle@v5
+      - uses: gradle/actions/setup-gradle@v6
 
       - name: "Cache SonarCloud packages"
         uses: actions/cache@v5
