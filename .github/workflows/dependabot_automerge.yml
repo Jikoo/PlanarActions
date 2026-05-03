@@ -54,15 +54,15 @@ jobs:
           echo "First commit of PR: $commit"
 
           # As an extra sanity step, ensure that Dependabot created the PR.
-          # Note that JQ outputs quoted string values!
-          author=$(jq .authors[0].login <<< "$commit")
-          if [ "$author" != '"dependabot[bot]"' ]; then
+          author=$(jq -r .authors[0].login <<< "$commit")
+          if [ "$author" != 'dependabot[bot]' ]; then
             echo "Actual author: $author"
             echo "::error ::PR was not created by Dependabot!"
             exit 1
           fi
 
-          body=$(jq .messageBody <<< "$commit")
+          # Parse body from commit JSON as raw text (-r).
+          body=$(jq -r .messageBody <<< "$commit")
           # Locate update type declarations.
           update_types=$(grep -P '^\s*update-type:\s' <<< "$body")
           # Greedy match everything after the first colon and space, outputting just the match.
@@ -70,7 +70,9 @@ jobs:
 
           # Because multiple dependencies can theoretically be updated at one time,
           # generate an array of unique elements from lines.
-          update_types=$(jq -c 'split("\n") | unique' <<< "$update_types")
+          # Input is raw text (-R).
+          # Output should be compact (-c) so we don't have to use multi-line syntax for step output.
+          update_types=$(jq -Rc 'split("\n") | unique' <<< "$update_types")
 
           # True if the update types are all in the whitelist (length is 0 after removing whitelist entries).
           whitelisted=$(jq "0 == (. - $TYPE_WHITELIST | length)" <<< "$update_types"
